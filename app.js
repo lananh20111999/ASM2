@@ -84,26 +84,32 @@ app.post('/doEdit',upload.single('picture'), async(req,res)=>{
     var introduction = req.body.introduction;
     var price = req.body.price;
     let newValues
-    if(!req.file){
-        newValues ={$set : {name: name, introduction: introduction, price:price}};
+    if(price.trim().length == 0 || isFinite(price) == false){
+        const condition = dbHandler.find(id);
+        const productToEdit = await dbHandler.findOneProduct("Product", condition);
+        res.render('edit', {product:productToEdit, editError: 'gia phai la so'})
+    }else{
+        if(!req.file){
+            newValues ={$set : {name: name, introduction: introduction, price:price}};
+        }
+        else{
+            var img = fs.readFileSync(req.file.path);
+            var encode_image = img.toString('base64');
+            var finalImg = {
+                id: req.file.filename,
+                contentType: req.file.mimetype,
+                image:  new Buffer.from(encode_image, 'base64')
+                };
+            newValues ={$set : {name: name, introduction: introduction, picture:finalImg, price:price}};
+        }
+        let condition = dbHandler.find(id);
+
+        let dbo = await dbHandler.updateOneProduct("Product", condition, newValues);
+
+        let results = await dbHandler.searchProduct("","Product");
+
+        res.render('manage',{product:results});
     }
-    else{
-        var img = fs.readFileSync(req.file.path);
-        var encode_image = img.toString('base64');
-        var finalImg = {
-            id: req.file.filename,
-            contentType: req.file.mimetype,
-            image:  new Buffer.from(encode_image, 'base64')
-            };
-        newValues ={$set : {name: name, introduction: introduction, picture:finalImg, price:price}};
-    }
-    let condition = dbHandler.find(id);
-
-    let dbo = await dbHandler.updateOneProduct("Product", condition, newValues);
-
-    let results = await dbHandler.searchProduct("","Product");
-
-    res.render('manage',{product:results});
 })
 
 app.post('/insert',upload.single('picture'), async(req,res)=>{
@@ -117,10 +123,14 @@ app.post('/insert',upload.single('picture'), async(req,res)=>{
         contentType: req.file.mimetype,
         image:  new Buffer.from(encode_image, 'base64')
         };
-    var newproduct = {name: name, introduction: introduction, picture:finalImg, price:price};
-    await dbHandler.insertOneIntoCollection("Product", newproduct);
-    var results = await dbHandler.searchProduct("","Product");
-    res.render('manage', {product:results});
+    if(price.trim().length == 0 || isFinite(price) == false){
+        res.render('add', {addError: 'gia phai la so'})
+    }else{
+        var newproduct = {name: name, introduction: introduction, picture:finalImg, price:price};
+        await dbHandler.insertOneIntoCollection("Product", newproduct);
+        var results = await dbHandler.searchProduct("","Product");
+        res.render('manage', {product:results});
+    }
 })
 const dbHandler = require('./databaseHandler')
 app.post('/search',async (req,res)=>{
