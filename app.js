@@ -134,6 +134,9 @@ app.get('/register',(req,res)=>{
 app.post('/doRegister',async (req,res)=>{
     const nameInput = req.body.name;
     const passInput = req.body.password;
+    if(passInput.length< 8){
+        res.render('register', {passError: 'Password phai tu 8 ki tu tro len'})
+    }
     const newUser = {username:nameInput,password:passInput};
     await dbHandler.insertOneIntoCollection("users", newUser);
     res.render('login')
